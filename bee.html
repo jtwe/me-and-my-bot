@@ -1,0 +1,133 @@
+<html>
+ <head>
+  <title>Da Bee</title>
+ </head>
+ <body>
+  <div id="setup">
+    Hints: <textarea id="hints"></textarea><br/>
+    Words found: <textarea id="words"></textarea><br/>
+    <button onclick="initBoard();" >Go!</button>
+  </div>
+  <div id="board" style="display:none">
+  </div>
+  <div id="board2">
+  </div>
+  
+  <script type="text/javascript">
+function initBoard() {
+  var lenVals = null;
+  var longest = 0;
+  var letters = new Array();
+  var letterLens = {};
+  var twoLetterLens = {};
+  var pangrams = 0;
+
+  var hint = getEl("hints").value;
+  var hintArray = hint.split("\n");
+  for (hintLineNum in hintArray) {
+    var hintLine = hintArray[hintLineNum];
+	if (hintLine) hintLine = hintLine.toUpperCase();
+    console.log("Checking", hintLine);
+	if (hintLine.match(/PANGRAMS: (\d+)/)) {
+	  pangrams = hintLine.match(/PANGRAMS: (\d+)/)[1] - 0;
+	  console.log("Found # pangrams", pangrams);
+	}
+	
+    if (hintLine.match(/(\d+\s+)+Σ/)) {
+      console.log("Found lenVals line!");
+      lenVals = hintLine.match(/(\d+)/g);
+      //alert(lenVals.length);
+    }
+    if (hintLine.match(/^[A-Z]:(\s+[-0-9]+)/g)) {
+      console.log("Found letterLens line!");
+      var letter = hintLine.match(/[A-Z]/)[0];
+      letters.push(letter);
+      var lens = hintLine.match(/[-0-9]+/g);
+      for (y in lens) {
+        if (lenVals[y] && lens[y]!=='-') {
+          letterLens[letter + "$" + lenVals[y]] = Number(lens[y]);
+          if (Number(lenVals[y])>longest) longest = Number(lenVals[y]);
+        }
+      }
+    }
+    if (hintLine.match(/[A-Z][A-Z]-\d+/g)) {
+      console.log("Found twoLetterLens line!");
+      var z = hintLine.match(/[A-Z][A-Z]-\d+/g);
+      for (y in z) {
+        var w = z[y].match(/([A-Z][A-Z])-(\d+)/)
+        console.log(hintLine, z, w);
+        twoLetterLens[w[1]] = Number(w[2]);
+      }
+    }
+  }
+  
+  var wordfull = getEl("words").value;
+  var wordArray = wordfull.split("\n");
+  for (wordArrayNum in wordArray) {
+    var word = wordArray[wordArrayNum];
+    if (!word || word.length==0 || word.match(/^\s+$/)) continue;
+    word = word.trim().toUpperCase();
+    
+    letterLens[word.substr(0,1) + "$" + word.length]--;
+    twoLetterLens[word.substr(0,2)]--;
+	
+    console.log(word, (word.substr(0,1) + "$" + word.length), letterLens[word.substr(0,1) + "$" + word.length], word.substr(0,2), twoLetterLens[word.substr(0,2)]);
+	if (isPangram(word)) {
+	  pangrams--;
+	  console.log(" Pangram!", pangrams, word.length==7?"Perfect":"Non-Perfect");
+	}
+  }
+  
+
+  var table2Html = "LenVals: " + lenVals + ", longest: " + longest + "<br/>LetterLens: <br/>";
+  table2Html = table2Html + "Letters: " + letters + "<br/>";
+  var totalWords1 = 0, totalWords2 = 0;
+  for (l in letterLens) {
+    table2Html = table2Html + l + ": " + letterLens[l] + "<br/>";
+    totalWords1 += letterLens[l];
+  }
+  table2Html = table2Html + "TwoLetterLens: <br/>";
+  for (l in twoLetterLens) {
+    table2Html = table2Html + l + ": " + twoLetterLens[l] + "<br/>";
+    totalWords2 += twoLetterLens[l]
+  }
+  table2Html = table2Html + "# words = " + totalWords1 + ", " + totalWords2 + "<br/>";
+  getEl('board').innerHTML = table2Html;
+  
+  
+  var tableHtml = "";
+  letters.forEach(function myFunction(letter, index, array) {
+    var letterWritten = false;
+    var freeLens = new Array();
+    for (twoLetter in twoLetterLens) {
+      if (twoLetter.startsWith(letter) && twoLetterLens[twoLetter]>0) {
+        tableHtml = tableHtml + twoLetter + "-" + twoLetterLens[twoLetter] + " ";
+        letterWritten = true;
+      }
+    }
+    for (letterLen in letterLens) {
+      if (letterLen.startsWith(letter) && letterLens[letterLen]>0) {
+        for (var i=0; i<letterLens[letterLen]; i++) freeLens.push(letterLen.substr(2));
+      }
+    }
+    if (letterWritten) tableHtml = tableHtml + "(" + freeLens + ")<br/>";
+  });
+  if (pangrams) tableHtml = tableHtml + "Pangrams: " + pangrams + "<br/>";
+  getEl('board2').innerHTML = tableHtml;
+}
+
+function getEl(name) {
+  return document.getElementById(name);
+}
+
+function isPangram(word) {
+  var used = [];
+  for (i in word) {
+    if (!used.includes(word[i])) used.push(word[i]);
+  }
+  return used.length==7;
+}
+
+  </script>  
+ </body>
+</html>
