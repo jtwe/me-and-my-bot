@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+.black {
+  background: black;
+}
+
+.grey {
+  background: #bfbfbf;
+}
+
+.red {
+  background: #cc2900;
+}
+ 
+.led {
+  position: fixed;
+  border-radius: 50%;
+  padding: 6px;
+  width: 6px;
+  height: 6px;
+}
+
+.centerdiv {
+  margin: auto;
+}
+
+.centertext {
+  position: absolute;
+  color: white;
+  top: 48%;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 36px;
+  font-family: "Lucida Console", "Courier New", monospace;
+}
+</style>
+
+<script>
+function startTime() {
+  var docW = Math.min(window.innerHeight-40, window.innerWidth); //200;
+  var docH = Math.min(window.innerHeight-40, window.innerWidth); //200;
+ 
+  var xOffset = (window.innerWidth - docW)/2;
+  if (xOffset<0) xOffset = 0;
+ 
+  var parentNode = document.getElementById("container");
+  for (var i=0; i<16; i++) {
+    var obj = document.createElement("p");
+    obj.id = "dot" + i;
+    var ledX = (docW * (0.5 + 0.4 * Math.sin((i+8) * Math.PI / 8)) ) - 3;
+    var ledY = (docH * (0.5 + 0.4 * Math.cos((i+8) * Math.PI / 8)) ) - 3;
+    
+    //var obj = document.getElementById("dot" + i);
+    obj.style.left = (xOffset + ledX) + "px";
+    obj.style.top = ledY + "px";
+    
+    parentNode.appendChild(obj);
+  }
+ 
+//  document.getElementById("ctext").style.width = docW + "px";
+//  document.getElementById("ctext").style.height = docH + "px";
+  document.getElementById("ctext").style.top = ((docH/2)-20) + "px";
+  doTime();
+}
+
+function getMyTime(d, bd) {
+  var hourNum = d.getHours()%12;
+  if (hourNum==0) hourNum = 12;
+  var hours = ("0"+hourNum).slice(-2);
+ 
+  var minutes = ("0"+d.getMinutes()).slice(-2);
+  var seconds = ("0"+d.getSeconds()).slice(-2);
+
+  var binTime = "";
+  for (var i=0; i<4; i++) {
+    binTime = binTime + parseInt(bd.slice(i*4, i*4+4), 2).toString(16);
+    if (i==1) binTime = binTime + ":";
+  }
+ 
+  return hours + ":" + minutes + ":" + seconds + "<br/>" + binTime;
+}
+
+function doTime() {
+  var d = new Date();
+  var d2 = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+  var bs = Math.floor((d-d2)*64/84375);
+//  var bd = '0000000000000000' + bs.toString(2); bd = bd.slice(-16);
+  var bd = ('0000000000000000' + bs.toString(2)).slice(-16);
+//  console.log(bd);
+  for (var i=0; i<16; i++) {
+    //console.log(bd.slice(i, i+1));
+    var obj = document.getElementById("dot" + i);
+    if (bd.slice(i, i+1)==1) obj.className = "led red"; else obj.className = "led grey";
+  }
+  var t = setTimeout(doTime, 100);
+  document.getElementById("ctext").innerHTML = getMyTime(d, bd);
+}
+</script>
+</head>
+
+<body onload="startTime()" class="black">
+  <div id="container" class="centerdiv">
+    <div id="ctext" class="centertext"></div>
+  </div>
+</body>
+</html>
