@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Ear Piercer</title>
+		<style>
+		</style>
+		<script>
+			var waveReal = [0, 1, 0], waveImag = [0, 0, 1];
+			function randomNumber(min=0, max=1, round=100) {
+				var toRet = Math.random();
+				toRet*=(max-min);
+				toRet+=min;
+
+				toRet*=round;
+				toRet = Math.round(toRet);
+				toRet/=round;
+				return toRet;
+			}
+			
+			function generateWavePart(terms, array, min, max, round) {
+				for (var x=0; x<terms; x++) {
+					array.push(randomNumber(min, max, round));
+				}
+			}
+			
+			function generateWave() {
+				waveReal = [0.0];
+				waveImag = [0.0];
+				
+				let terms = Number.parseInt(document.getElementById("waveterms").value);
+				if (terms<=0) terms = 1+Math.round(10*Math.random());
+				let min = Number.parseInt(document.getElementById("wavemin").value);
+				let max = Number.parseInt(document.getElementById("wavemax").value);
+				let round = Number.parseInt(document.getElementById("waveround").value);
+				if (round<=0) round = 100;
+
+				generateWavePart(terms, waveReal, min, max, round);
+				generateWavePart(terms, waveImag, min, max, round);
+				
+				document.getElementById("wavevals").innerHTML = waveReal + "; " + waveImag + "; " + terms;
+			}
+
+			function generateWave2() {
+				waveReal = [0.0];
+				waveImag = [0.0];
+				
+				let terms = Number.parseInt(document.getElementById("waveterms").value);
+				if (terms<=0) terms = 1+Math.round(10*Math.random());
+				let round = Number.parseInt(document.getElementById("waveround").value);
+				if (round<=0) round = 100;
+
+				let currReal = 1.0;
+				for (var x=0; x<terms; x++) {
+					waveReal.push(currReal);
+					
+					currReal*= (1+ (0.4*Math.random()));
+					currReal*=round;
+					currReal = Math.round(currReal);
+					currReal/=round;
+					
+					waveImag.push(randomNumber(-1, 1, 1));
+				}
+				
+				document.getElementById("wavevals").innerHTML = waveReal + "; " + waveImag + "; " + terms;
+			}
+
+			function stopThis(oscillator) {
+//				console.log(oscillator);
+				oscillator.stop();
+			}
+
+			const gainVal = 0.1;
+			function playNote() {
+				let noteTones = Number.parseInt(document.getElementById("note").value);
+				let octaveTones = Number.parseInt(document.getElementById("octave").value);
+				let tonesAboveMiddleA = noteTones + (octaveTones*12) - 9;
+				
+				let eighthNoteMs = Math.floor(30000 / Number(document.getElementById("bpm").value));
+				let freq = Math.round(44000 * Math.pow(2, (tonesAboveMiddleA/12)))/100;
+				console.log(noteTones, octaveTones, tonesAboveMiddleA, freq);
+
+				let context = new AudioContext();
+
+				let gainNode = context.createGain();
+				gainNode.connect(context.destination);
+				gainNode.gain.value = gainVal;
+
+				let oscillator = context.createOscillator();
+				
+				//oscillator.type = "square";
+				//oscillator.setPeriodicWave(context.createPeriodicWave([0,1,0],[0,0,1]));
+				//oscillator.setPeriodicWave(context.createPeriodicWave(waveReal,waveImag));
+				oscillator.setPeriodicWave(context.createPeriodicWave(
+				  [0, 7.4, 4.9, 3.3, 2.2, 1.5, 1.0],
+				  [0, 1.0, 0.0, 1.0,-1.0, 1.0, 1.0]
+				));
+				
+				oscillator.connect(gainNode);
+				//oscillator.connect(context.destination);
+				oscillator.frequency.value = freq;
+				oscillator.start();
+				oscillator.stop(eighthNoteMs/250);
+
+				//setTimeout(stopThis, 2*eighthNoteMs, oscillator);
+			}
+
+			function playChord() {
+				let noteTones = Number.parseInt(document.getElementById("note").value);
+				let octaveTones = Number.parseInt(document.getElementById("octave").value);
+				let tonesAboveMiddleA = noteTones + (octaveTones*12) - 9;
+				
+				let eighthNoteMs = Math.floor(30000 / Number(document.getElementById("bpm").value));
+
+				let context = new AudioContext();
+
+				let gainNode = context.createGain();
+				gainNode.connect(context.destination);
+				gainNode.gain.value = gainVal;
+
+				for (var x=0; x<3; x++) {
+					let oscillator = context.createOscillator();
+					let myReal = [0], myImag = [0];
+					generateWavePart(10, myReal);
+					generateWavePart(10, myImag);
+
+					if (x==1) tonesAboveMiddleA+=4;
+					if (x==2) tonesAboveMiddleA+=3;
+					let freq = Math.round(44000 * Math.pow(2, (tonesAboveMiddleA/12)))/100;
+
+					oscillator.setPeriodicWave(context.createPeriodicWave(myReal,myImag));
+					oscillator.connect(gainNode);
+					oscillator.frequency.value = freq;
+					oscillator.start();
+					oscillator.stop(eighthNoteMs/250);
+				}
+
+			}
+		</script>
+	</head>
+	<body>
+		<p>Choose note:
+			<select id="note">
+				<option value="0">C</option><option value="1">C#/Db</option><option value="2">D</option>
+				<option value="3">D#/Eb</option><option value="4">E</option><option value="5">F</option>
+				<option value="6">F#/Gb</option><option value="7">G</option><option value="8">G#/Ab</option>
+				<option value="9">A</option><option value="10">A#/Bb</option><option value="11">B</option>
+			</select>
+			<select id="octave">
+				<option value="-3">1</option><option value="-2">2</option><option value="-1">3</option>
+				<option value="0" selected>4</option><option value="1">5</option><option value="2">6</option>
+			</select>
+		</p>
+		<p>BPM:
+			<select id="bpm">
+				<option value="80">80</option><option value="90">90</option>
+				<option value="100">100</option><option value="110">110</option>
+				<option value="120" selected>120</option>
+				<option value="130">130</option><option value="140">140</option>
+				<option value="150">150</option><option value="160">160</option>
+			</select>
+		</p>
+		<p>Periodic wave values:
+			<input id="waveterms" value="2" size=5 />terms; 
+			min <input id="wavemin" value="-1" size=5 />
+			max <input id="wavemax" value="1" size=5 />
+			round to nearest 1/<input id="waveround" value="100" size=5 />
+			<br/>
+			<button id="genwave" onclick="generateWave()">Generate</button>
+			<button id="genwave2" onclick="generateWave2()">Generate 2</button>
+			<textarea id="wavevals" >Values?</textarea>
+		<p>
+			<button id="play" onclick="playNote()">Play note</button>
+			<button id="playchord" onclick="playChord()">Play chord</button>
+		</p>
+	</body>
+</html>

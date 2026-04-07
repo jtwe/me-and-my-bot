@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Train Listener</title>
+		<style>
+		</style>
+		<script>
+			var waveReal = [0, 1, 0], waveImag = [0, 0, 1];
+			var answers = [];
+			var responses = {};
+			
+			var intervalText = [
+				"Unison", // 0
+				"Minor second", // 1
+				"Major second", // 2
+				"Minor third", // 3
+				"Major third", // 4
+				"Perfect fourth", // 5
+				"Tritone", // 6
+				"Perfect fifth", // 7
+				"Minor sixth", // 8
+				"Major sixth", // 9
+				"Minor seventh", // 10
+				"Major seventh", // 11
+				"Octave" // 12
+			];
+			
+			var noteText = [
+				"A", "A#/Bb", "B", "C",
+				"C#/Db", "D", "D#/Eb", "E",
+				"F", "F#/Gb", "G", "G#/Ab"
+			];
+			
+			function showAnswer() {
+				document.getElementById("showanswer").disabled=true;
+				
+				let correct = Math.abs(answers[1]-answers[0]);
+				let guess = Number(document.getElementById("answer").value);
+				console.log("showAnswer", correct, guess, correct==guess);
+				
+				if (responses[correct]===undefined) responses[correct] = {};
+				if (responses[correct][guess]===undefined) responses[correct][guess] = 0;
+				responses[correct][guess]++;
+				
+				let right = responses[correct][correct], total = 0;
+				if (right===undefined) right = 0;
+				for (var x=0; x<=12; x++) {
+					if (responses[correct][x]!==undefined) total += responses[correct][x];
+				}
+				
+				wavevals.innerHTML = 
+					"One: " + noteText[(24+answers[0])%12] + " (" + answers[0] + ") \n" +
+					"Two: " + noteText[(24+answers[1])%12] + " (" + answers[1] + ") \n" +
+					"Interval: " + intervalText[correct] + " (" + correct + ")\n" +
+					JSON.stringify(responses[correct]) + "\n" +
+					right + " / " + total + " correct - " + Math.round(10000*right/total)/100 + "%"
+					;
+			}
+			
+			function randomNumber(min=0, max=1, round=100) {
+				var toRet = Math.random();
+				toRet*=(max-min);
+				toRet+=min;
+
+				toRet*=round;
+				toRet = Math.round(toRet);
+				toRet/=round;
+				return toRet;
+			}
+
+			function defaultWave() {
+				waveReal = [0, 1, 0];
+				waveImag = [0, 0, 1];
+			}
+			
+			function generateWave() {
+				waveReal = [0.0];
+				waveImag = [0.0];
+				
+				let terms = 5+Math.round(5*Math.random());
+				let round = 100;
+
+				let currReal = 1.0;
+				for (var x=0; x<terms; x++) {
+					waveReal.push(currReal);
+					
+					currReal*= (1+ (0.4*Math.random()));
+					currReal*=round;
+					currReal = Math.round(currReal);
+					currReal/=round;
+					
+					waveImag.push(randomNumber(-1, 1, 1));
+				}
+				
+				//document.getElementById("wavevals").innerHTML = waveReal + "; " + waveImag + "; " + terms;
+				console.log("generateWave", waveReal, waveImag, terms);
+			}
+
+			const gainVal = 0.1;
+			const bpm = 120;
+			function playTone(which, index=0) {
+				let eighthNoteMs = Math.floor(30000 / bpm);
+
+				let toneset = which[index];
+				console.log("playTone", which, which.length, toneset, index);
+				
+				let context = new AudioContext();
+
+				let gainNode = context.createGain();
+				gainNode.connect(context.destination);
+				gainNode.gain.value = gainVal;
+
+				for (var x=0; x<toneset.length; x++) {
+					let tone = answers[toneset[x]];
+					let freq = Math.round(44000 * Math.pow(2, (tone/12)))/100;
+					console.log("playTone 2", tone, freq);
+
+					let oscillator = context.createOscillator();
+					oscillator.setPeriodicWave(context.createPeriodicWave(waveReal,waveImag));
+					
+					oscillator.connect(gainNode);
+					//oscillator.connect(context.destination);
+					oscillator.frequency.value = freq;
+					oscillator.start();
+					oscillator.stop(4*eighthNoteMs/1000);
+				}
+				
+				if (which.length>index+1) {
+					setTimeout(playTone, 4*eighthNoteMs+20, which, index+1);
+				}
+			}
+			
+			function getInterval() {
+				//return Math.round(24*Math.random())-12;
+
+				let choices = [];
+				for (var x=0; x<=12; x++) {
+					y = document.getElementById("intervalable" + x); 
+					//console.log(x, y, y.value, y.checked); 
+					if (y.checked) choices.push(y.value);
+				}
+				
+				var toRet = Number(choices[Math.floor(Math.random()*choices.length)]);
+				console.log("getInterval ", toRet, choices);
+				return toRet;
+			}
+			
+			function generateTrain() {
+				generateWave();
+				answer1 = Math.round(12*Math.random())-6;
+				answer2 = answer1 + getInterval();
+				if (Math.random()<0.5) {
+					answers = [answer1, answer2];
+				} else {
+					answers = [answer2, answer1];
+				}
+				console.log("generateTrain ", answers, answer1, answer2);
+				wavevals.innerHTML = "???";
+				document.getElementById("answer").value=-1 
+				document.getElementById("showanswer").disabled=false;
+			}
+		</script>
+	</head>
+	<body>
+		<p>
+			<button id="generate" onclick="generateTrain()">Generate</button>
+			<button id="generatewave" onclick="generateWave()">Generate wave</button>
+			<button id="settlewave" onclick="defaultWave()">Default wave</button>
+		</p>
+		<p> Available intervals:
+			<table>
+				<tr>
+					<td>0</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td>
+					<td>7</td><td>8</td><td>9</td><td>10</td><td>11</td><td>12</td>
+				</tr>
+				<tr>
+					<td><input type="checkbox" name="intervalable" id="intervalable0" value="0" checked /></td>
+					<td><input type="checkbox" name="intervalable" id="intervalable1" value="1" checked /></td>
+					<td><input type="checkbox" name="intervalable" id="intervalable2" value="2" checked /></td>
+					<td><input type="checkbox" name="intervalable" id="intervalable3" value="3" checked /></td>
+					<td><input type="checkbox" name="intervalable" id="intervalable4" value="4" checked /></td>
+					<td><input type="checkbox" name="intervalable" id="intervalable5" value="5" checked /></td>
+					<td><input type="checkbox" name="intervalable" id="intervalable6" value="6" checked /></td>
+					<td><input type="checkbox" name="intervalable" id="intervalable7" value="7" checked /></td>
+					<td><input type="checkbox" name="intervalable" id="intervalable8" value="8" checked /></td>
+					<td><input type="checkbox" name="intervalable" id="intervalable9" value="9" checked /></td>
+					<td><input type="checkbox" name="intervalable" id="intervalable10" value="10" checked /></td>
+					<td><input type="checkbox" name="intervalable" id="intervalable11" value="11" checked /></td>
+					<td><input type="checkbox" name="intervalable" id="intervalable12" value="12" checked /></td>
+				</tr>
+			</table>
+		</p>
+		<p>
+			<button id="playall" onclick="playTone([[0], [1], [0, 1]])">Play all</button>
+			<button id="playfirst" onclick="playTone([[0]])">Play first</button>
+			<button id="playsecond" onclick="playTone([[1]])">Play second</button>
+			<button id="playchord" onclick="playTone([[0,1]])">Play both (parallel)</button>
+			<button id="playinterval" onclick="playTone([[0], [1]])">Play both (serial)</button>
+		</p>
+		
+		<p>
+			<select id="answer">
+				<option value=-1>Answer?</option><option value=0>0 - Unison</option><option value=1>1 - Minor Second</option><option value=2>2 - Major Second</option>
+				<option value=3>3 - Minor Third</option><option value=4>4 - Major Third</option><option value=5>5 - Perfect Fourth</option>
+				<option value=6>6 - Tritone</option><option value=7>7 - Perfect Fifth</option><option value=8>8 - Minor Sixth</option>
+				<option value=9>9 - Major Sixth</option><option value=10>10 - Minor Seventh</option><option value=11>11 - Major Seventh</option><option value=12>12 - Octave</option>
+			</select>
+			<button id="showanswer" onclick="showAnswer()" disabled>Show answer</button>
+			<textarea id="wavevals" >...</textarea>
+		</p>
+	</body>
+</html>
