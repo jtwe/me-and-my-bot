@@ -90,10 +90,23 @@
 				//oscillator.type = "square";
 				//oscillator.setPeriodicWave(context.createPeriodicWave([0,1,0],[0,0,1]));
 				//oscillator.setPeriodicWave(context.createPeriodicWave(waveReal,waveImag));
+				/*
 				oscillator.setPeriodicWave(context.createPeriodicWave(
 				  [0, 7.4, 4.9, 3.3, 2.2, 1.5, 1.0],
 				  [0, 1.0, 0.0, 1.0,-1.0, 1.0, 1.0]
 				));
+				*/
+				/*
+				oscillator.setPeriodicWave(context.createPeriodicWave(
+				  [-1, 1, -1, 1, -1, 1],
+				  [1, 0, 1, 0, 1, 0]
+				));
+				*/
+				oscillator.setPeriodicWave(context.createPeriodicWave(
+				  [-1, -0.9, -0.6, -0.3, 0, 0.3, 0.6, 0.9, 1],
+				  [-1, -0.9, -0.6, -0.3, 0, 0.3, 0.6, 0.9, 1]
+				));
+				
 				
 				oscillator.connect(gainNode);
 				//oscillator.connect(context.destination);
@@ -135,6 +148,98 @@
 				}
 
 			}
+
+			function execPlayNoteHarm(context, freq, gainVal, duration, timbre=null, harmnum=5, decay=0.5) {
+				if (timbre==null) {
+					timbre=[];
+					for (var i=0; i<harmnum; i++) {
+						timbre.push(Math.pow(decay, i));
+					}
+				}
+				
+				for (var i=0; i<timbre.length; i++) {
+					let gainNode = context.createGain();
+					gainNode.connect(context.destination);
+					gainNode.gain.value = gainVal * timbre[i];
+					//gainNode.gain.value = gainVal * Math.pow(.5, i);
+
+					let oscillator = context.createOscillator();
+					oscillator.type = 'sine';
+/*
+					// "electric piano/organy (The Doors-ish) sound
+					oscillator.setPeriodicWave(context.createPeriodicWave(
+					  [-.8, 1, .8, .8, -.8, -.8, -1],
+					  [-.8, 1, .8, .8, -.8, -.8, -1]
+					));
+*/
+/*
+					// "soft, sine-like wave (a little grittier)"
+					oscillator.setPeriodicWave(context.createPeriodicWave(
+					  [-1, 0, 1, 0, -1, 0, 1],
+					  [-1, 0, 1, 0, -1, 0, 1]
+					));
+*/
+/*
+					// "more like a horn"
+					oscillator.setPeriodicWave(context.createPeriodicWave(
+					  [-1, 1, -1, 1, -1, 1],
+					  [ 1, 0,  1, 0,  1, 0]
+					));
+*/
+/*
+					// "trumpety"
+					oscillator.setPeriodicWave(context.createPeriodicWave(
+					  [-1, -0.9, -0.6, -0.3, 0, 0.3, 0.6, 0.9, 1],
+					  [-1, -0.9, -0.6, -0.3, 0, 0.3, 0.6, 0.9, 1]
+					));
+*/
+					oscillator.connect(gainNode);
+					oscillator.frequency.value = freq * (i+1);
+					oscillator.start();
+					oscillator.stop(duration);
+					
+					console.log("Execplaynoteharm", i, gainNode.gain.value, oscillator.frequency.value);
+				}
+			}
+
+			function playNoteHarm() {
+				let noteTones = Number.parseInt(document.getElementById("note").value);
+				let octaveTones = Number.parseInt(document.getElementById("octave").value);
+				let tonesAboveMiddleA = noteTones + (octaveTones*12) - 9;
+				
+				let eighthNoteMs = Math.floor(30000 / Number(document.getElementById("bpm").value));
+				let freq = Math.round(44000 * Math.pow(2, (tonesAboveMiddleA/12)))/100;
+				console.log(noteTones, octaveTones, tonesAboveMiddleA, freq);
+
+				let context = new AudioContext();
+				let harmnum = Number.parseInt(document.getElementById("harmnum").value);
+				let harmdecay = Number.parseFloat(document.getElementById("harmdecay").value);
+				
+				//execPlayNoteHarm(context, freq, gainVal, eighthNoteMs/250, [1, 0.1, .4, 0.05, .2]);
+				execPlayNoteHarm(context, freq, gainVal, eighthNoteMs/250, null, harmnum, harmdecay);
+			}
+
+			function playChordHarm() {
+				let noteTones = Number.parseInt(document.getElementById("note").value);
+				let octaveTones = Number.parseInt(document.getElementById("octave").value);
+				let tonesAboveMiddleA = noteTones + (octaveTones*12) - 9;
+				
+				let eighthNoteMs = Math.floor(30000 / Number(document.getElementById("bpm").value));
+				let freq1 = Math.round(44000 * Math.pow(2, (  tonesAboveMiddleA    /12)))/100;
+				let freq3 = Math.round(44000 * Math.pow(2, ( (tonesAboveMiddleA+4) /12)))/100;
+				let freq5 = Math.round(44000 * Math.pow(2, ( (tonesAboveMiddleA+7) /12)))/100;
+				console.log(noteTones, octaveTones, tonesAboveMiddleA, freq1, freq3, freq5);
+
+				let context = new AudioContext();
+				let harmnum = Number.parseInt(document.getElementById("harmnum").value);
+				let harmdecay = Number.parseFloat(document.getElementById("harmdecay").value);
+				
+				execPlayNoteHarm(context, freq1, gainVal, eighthNoteMs/250, null, harmnum, harmdecay);
+				execPlayNoteHarm(context, freq3, gainVal, eighthNoteMs/250, null, harmnum, harmdecay);
+				execPlayNoteHarm(context, freq5, gainVal, eighthNoteMs/250, null, harmnum, harmdecay);
+			}
+
+
 		</script>
 	</head>
 	<body>
@@ -171,6 +276,12 @@
 		<p>
 			<button id="play" onclick="playNote()">Play note</button>
 			<button id="playchord" onclick="playChord()">Play chord</button>
+		</p>
+		<p>
+			Harmonic waves: <input id="harmnum" value="5" size=5 />
+			Decay: <input id="harmdecay" value="0.5" size=5 />
+			<button id="playharm" onclick="playNoteHarm()">Play note with harmonics</button>
+			<button id="playchordharm" onclick="playChordHarm()">Play chord with harmonics</button>
 		</p>
 	</body>
 </html>

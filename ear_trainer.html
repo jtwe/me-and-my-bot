@@ -5,7 +5,8 @@
 		<style>
 		</style>
 		<script>
-			var waveReal = [0, 1, 0], waveImag = [0, 0, 1];
+			//var waveReal = [0, 1, 0], waveImag = [0, 0, 1];
+			var waveReal = [-1, -0.9, -0.6, -0.3, 0, 0.3, 0.6, 0.9, 1], waveImag = [-1, -0.9, -0.6, -0.3, 0, 0.3, 0.6, 0.9, 1];
 			var answers = [];
 			var responses = {};
 			
@@ -98,6 +99,37 @@
 
 			const gainVal = 0.1;
 			const bpm = 120;
+			function execPlayNoteHarm(context, freq, gainVal, duration, timbre=null, harmval=5, decay=0.5) {
+				if (timbre==null) {
+					timbre=[];
+					for (var i=0; i<harmval; i++) {
+						timbre.push(Math.pow(decay, i));
+					}
+				}
+				
+				for (var i=0; i<timbre.length; i++) {
+					let gainNode = context.createGain();
+					gainNode.connect(context.destination);
+					gainNode.gain.value = gainVal * timbre[i];
+					//gainNode.gain.value = gainVal * Math.pow(.5, i);
+
+					let oscillator = context.createOscillator();
+					oscillator.type = 'sine';
+/*
+					oscillator.setPeriodicWave(context.createPeriodicWave(
+					  [-.8, 1, .8, .8, -.8, -.8, -1],
+					  [-.8, 1, .8, .8, -.8, -.8, -1]
+					));
+*/
+					oscillator.connect(gainNode);
+					oscillator.frequency.value = freq * (i+1);
+					oscillator.start();
+					oscillator.stop(duration);
+					
+					console.log("Execplaynoteharm", i, gainNode.gain.value, oscillator.frequency.value);
+				}
+			}
+
 			function playTone(which, index=0) {
 				let eighthNoteMs = Math.floor(30000 / bpm);
 
@@ -106,15 +138,13 @@
 				
 				let context = new AudioContext();
 
-				let gainNode = context.createGain();
-				gainNode.connect(context.destination);
-				gainNode.gain.value = gainVal;
-
 				for (var x=0; x<toneset.length; x++) {
 					let tone = answers[toneset[x]];
 					let freq = Math.round(44000 * Math.pow(2, (tone/12)))/100;
 					console.log("playTone 2", tone, freq);
 
+					execPlayNoteHarm(context, freq, gainVal, eighthNoteMs/250, null, 15, .7);
+/*
 					let oscillator = context.createOscillator();
 					oscillator.setPeriodicWave(context.createPeriodicWave(waveReal,waveImag));
 					
@@ -123,6 +153,7 @@
 					oscillator.frequency.value = freq;
 					oscillator.start();
 					oscillator.stop(4*eighthNoteMs/1000);
+*/
 				}
 				
 				if (which.length>index+1) {
@@ -144,17 +175,17 @@
 				console.log("getInterval ", toRet, choices);
 				return toRet;
 			}
-			
+
 			function generateTrain() {
 				generateWave();
-				answer1 = Math.round(12*Math.random())-6;
+				answer1 = Math.round(12*Math.random())-18;
 				answer2 = answer1 + getInterval();
 				if (Math.random()<0.5) {
 					answers = [answer1, answer2];
 				} else {
 					answers = [answer2, answer1];
 				}
-				console.log("generateTrain ", answers, answer1, answer2);
+				console.log("generateTrain ", answers, answer1, answer2, Math.abs(answer1-answer2) );
 				wavevals.innerHTML = "???";
 				document.getElementById("answer").value=-1 
 				document.getElementById("showanswer").disabled=false;
